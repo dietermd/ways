@@ -95,6 +95,7 @@
 			}
 
 			var geoJPromise = fetchData();
+		
 		//VARIÁVEIS-------------------------------------------------------------------------------------------------------------------
 			//Define o Icone
 			var busIcon = L.icon({
@@ -124,10 +125,10 @@
 			
 			var centroPartida;
 			var centroDestino;
-			var raioCirculo = 200;				
-			var tempGeoJSON;
+			var raioCirculo = 200;
 			
 		//FUNÇÔES----------------------------------------------------------------------------------------------------------------------
+			
 			//Troca tela de carregamento para o programa
 			function init(){
 				console.log("loaded");
@@ -193,10 +194,9 @@
 			function removeRota(){
 				if(layerGroup){mymap.removeLayer(layerGroup);}			
 			}
+			
 		//----------------------------------------------------------------------------------------------------------------------------
-			
-			
-		
+					
 			function escolha(b){
 				switch (b.value){
 					case "1":
@@ -264,9 +264,8 @@
 			
 			//---------------------------------------------------------------------------------------------------------------------
 			
-			mymap.on('click', clickMapa);
-			function clickMapa(e){
-				
+			
+			function clickMapa(e){				
 				
 				if(estado == 2){
 					
@@ -416,6 +415,7 @@
 				}
 			
 			}
+			mymap.on('click', clickMapa);
 			
 			function onLayerClick2(e){				
 				//document.getElementById('dadosPonto2').innerHTML = e.target.feature.properties.numeroDoPonto + " - " + e.target.feature.properties.rua + ", " + e.target.feature.properties.referencia;
