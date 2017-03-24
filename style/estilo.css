@@ -42,6 +42,22 @@ body{
     width: 100%;
     visibility: hidden;
 }
+
+#mostraTodosPontos{
+	text-align: center;
+	display: none;
+}
+
+#pontosProximos{
+	text-align: center;
+	display: none;
+}
+
+#rotaLocalidades{
+	text-align: center;
+	display: none;
+}
+
 .caixa{
     width: 400px;;
     height: 100vh;
