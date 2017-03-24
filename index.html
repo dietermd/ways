@@ -33,166 +33,102 @@
 
 		<div class="caixa">
 			<div id="dados" class="container">
-				<p>Selecione um Ponto: </p>
-				<select id='selectPonto' class="form-control form-control-md"></select>
-				<button class="btn btn-secondary sidebar-btn" onClick='selecionaPonto()'>Selecionar</button>
-				<p>Linhas que passar por aqui:</p>
-				<select id='selectLinha' class="form-control form-control-md"></select> </p>
-				<button onClick='mostraLinha()' class="btn btn-secondary">Mostrar Linha</button>
-				<p>Toque em algum lugar do mapa para ver os pontos proximos</p>
-				<select id='selectPontoProximo' class="form-control formcontrol-lg"></select> </p>
-				<button onClick='selecionaPontoProximo()' class="btn btn-secondary">Selecionar Ponto</button>
-				<p>Linhas que passam nesse ponto:</p>
-				<select id='selectLinhaProximo' class="form-control formcontrol-lg"></select> </p>
-				<button onClick='mostraLinhaProximo()' class="btn btn-secondary">Mostrar Linha</button></p>
-				<button onClick='limpaRotaLite()' class="btn btn-danger">Limpar</button></p>
-				<p>Mostrar rotas entre duas localidades:</p>
-				<button onClick='selecPartida()' class="btn btn-secondary">Selec. Loc. Partida</button>
-				<button onClick='selecDestino()' class="btn btn-secondary">Selec. Loc. Destino</button>
-				<select id='linhasCorretas' class="form-control formcontrol-lg"></select> </p>
-				<button onClick='mostraRota()' class="btn btn-secondary">Mostrar Rota</button>
+				<div id="menu">
+					<p>Selecione uma Opção:</p>
+					<button class="btn btn-secondary" value="1" onClick="escolha(this)">Todos Os Pontos</button> </p>
+					<button class="btn btn-secondary" value="2" onClick="escolha(this)">Pontos Próximos</button> </p>
+					<button class="btn btn-secondary" value="3" onClick="escolha(this)">Rota Entre Locais</button> </p>
+				</div>
+			
+				<div id="mostraTodosPontos">
+					<p>Ponto selecionado: </p>
+					<p id="dadosPonto"></p>
+					<p>Linhas que passam no ponto:</p>
+					<select id='selectLinha' class="form-control form-control-md"></select> </p>
+					<button onClick='mostraLinha()' class="btn btn-secondary">Mostrar Rota</button> </p>
+					<button class="btn btn-danger" onClick='voltaMenu()'>Voltar</button>
+					
+				</div>	
+				
+				<div id="pontosProximos">	
+					<p>Toque em algum lugar do mapa e depois selecione o ponto.</p>
+					<p id="dadosPonto2"></p>
+					<p>Linhas que passam no ponto:</p>
+					<select id='selectLinhaProximo' class="form-control formcontrol-lg"></select> </p>
+					<button onClick='mostraLinha2()' class="btn btn-secondary">Mostrar Rota</button></p>
+					<button class="btn btn-danger" onClick='voltaMenu()'>Voltar</button>
+				</div>
+			
+				<div id="rotaLocalidades">
+					<p>Mostrar rotas entre duas localidades:</p>
+					<p>Selecione o local de partida e de clique no botão para escolher o local de destino.</p>
+					<p id="dadosPonto3"></p>
+					<button onClick='selecDestino()' class="btn btn-secondary">Selec. Loc. Destino</button>
+					<select id='linhasCorretas' class="form-control formcontrol-lg"></select> </p>
+					<button onClick='mostraLinha3()' class="btn btn-secondary">Mostrar Rota</button> </p>
+					<button onClick='voltaEstado3()' class="btn btn-secondary">Nova Busca</button> </p>
+					<button class="btn btn-danger" onClick='voltaMenu()'>Voltar</button>
+				</div>
 			</div>
 		</div>
 
 
 		<script>
-
+		//MAPA e FETCH-----------------------------------------------------------------------------------------------------------------
 			var mymap = L.map('mapid').setView([-20.2981, -40.3121], 12);
 
 			L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-				attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+				attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors | <a href="https://mapicons.mapsmarker.com">Icon</a>',
 				maxZoom: 18
 			}).addTo(mymap);
 
-			var URL = 'https://dl.dropboxusercontent.com/s/w4nstbivtiax0gm/DadosTeste.json?dl=0'; //dados geoJSON	
+			var URL = 'https://dl.dropboxusercontent.com/s/w4nstbivtiax0gm/DadosTeste.json?dl=0'; //dados geoJSON
 
 			var fetched = false;
 
 			//FETCH
-			async function foo(){
+			async function fetchData(){
 				var data = await fetch(URL); // notice the await
 				console.log("fetched");// code here only executes _after_ the request is done
 				fetched = true;
 				return data.json(); // data is defined
 			}
 
-			var geoJPromise = foo();
+			var geoJPromise = fetchData();
+		
+		//VARIÁVEIS-------------------------------------------------------------------------------------------------------------------
+			//Define o Icone
+			var busIcon = L.icon({
+				iconUrl: 'img/bus.png',
 
-			//Listar pontos
-			geoJPromise.then(function(response){
-				var todosPontos = response.listaDePontos;
-
-				var select = document.getElementById('selectPonto');
-				for (var i = 0; i < todosPontos.features.length; i++){
-					var opt = document.createElement('option');
-					opt.value = todosPontos.features[i].properties.linhas;
-					opt.innerHTML = todosPontos.features[i].properties.numeroDoPonto + ' - ' + todosPontos.features[i].properties.rua + ', ' + todosPontos.features[i].properties.referencia;
-					select.appendChild(opt);
-				}
-
-			})
-
-			var markers = [];
-			var markers2 = [];
-			var markersRota = [];
-            var polyline;
-			var pontosOnRadius = [];
-			var limite = [];
-			var linhasRota = [];
-
-			//Mostra linhas na lista e no mapa de acordo com ponto selecionado
-			function selecionaPonto(){
-
-				limpaRota();
-
-				var pontoEscolhido = (document.getElementById('selectPonto').value).split(','); //vetor de linhas que passam pelo ponto
-				console.log(pontoEscolhido);
-				var posPontoEscolhido = document.getElementById('selectPonto').selectedIndex; //posição do ponto escolhido na lista de pontos
-				console.log(document.getElementById('selectPonto').selectedIndex);
-
-				var select = document.getElementById('selectLinha'); //vetor de linhas que passam pelo ponto
-
-				//limpar lista
-				while (select.options.length > 0) {
-					select.remove(0);
-				}
-
-				//preencher lista de linhas
-				for (var i = 0; i < pontoEscolhido.length; i++){
-					var opt = document.createElement('option');
-					opt.value = pontoEscolhido[i];
-					opt.innerHTML = pontoEscolhido[i];
-					select.appendChild(opt);
-				}
-
-				//Mostra ponto escolhido no mapa
-				geoJPromise.then(function(response){
-					var todosPontos = response.listaDePontos;
-						var layer = L.geoJSON(todosPontos.features[posPontoEscolhido]).addTo(mymap);
-						markers.push(layer);
-				})
-			}
-
-			//Mostra no mapa os pontos da linha escolhida
-			function mostraLinha(){
-
-				limpaRota();
-
-				var linhaEscolhida = (document.getElementById('selectLinha').value).toString();
-				console.log(linhaEscolhida);
-
-				geoJPromise.then(function(response){
-					var todasLinhas = response.linhasDeOnibus;
-					var layer = L.geoJSON(todasLinhas[linhaEscolhida]).addTo(mymap);
-					markers.push(layer);
-				})
-			}
-
-			//Limpa pontos da linha zerando markers
-			function limpaRota(){
-				for (var i = 0; i < markers.length; i++){
-					mymap.removeLayer(markers[i]);
-				}
-				for (var i = 0; i < markersRota.length; i++){
-					mymap.removeLayer(markersRota[i]);
-				}
-				for (var i = 0; i < markers2.length; i++){
-						mymap.removeLayer(markers2[i]);
-				}
-				markers = [];
-				markers2 = [];
-				markersRota = [];
-			}
-
-			//Limpa pontos da linha sem zerar vetor markers
-			function limpaRotaLite(){
-				for (var i = 0; i < markers.length; i++){
-					mymap.removeLayer(markers[i]);
-				}
-
-				limpaRotaOnClick();
-			}
-
-			//Limpa as outras layers
-			function limpaRotaOnClick(){
-
-				if (polyline){
-                    mymap.removeLayer(polyline);
-                }
-
-				if(circle){
-					mymap.removeLayer(circle);
-				}
-
-				if(circle2){
-					mymap.removeLayer(circle2);
-				}
-				
-				if(arrows){
-					mymap.removeLayer(arrows);
-				}
-			}
-
+				iconSize:     [30, 45], // size of the icon
+				iconAnchor:   [15, 43], // point of the icon which will correspond to marker's location
+				popupAnchor:  [0, -40], // point from which the popup should open relative to the iconAnchor
+			});
+			
+			var pointMarkerOptions = {
+				radius: 6,
+				fillColor: "#ff7800",
+				color: "#000",
+				weight: 1,
+				opacity: 1,
+				fillOpacity: 0.8
+			};
+			
+			var estado = 0;
+			
+			var layerTodosPontos;
+			var layerGroup;
+			
+			var circuloPartida;
+			var circuloDestino;
+			
+			var centroPartida;
+			var centroDestino;
+			var raioCirculo = 200;
+			
+		//FUNÇÔES----------------------------------------------------------------------------------------------------------------------
+			
 			//Troca tela de carregamento para o programa
 			function init(){
 				console.log("loaded");
@@ -207,373 +143,318 @@
 					init();
 				}
 			}, 10);
-
-			//Variáveis
-			//var popup = L.popup();
-			var circle;
-			var circle2;
-			var radius = 200; //Raio de distancia ao ponto clicado
-			var arrows;
-			var centroPartida;
-
-			//Evento de clique no mapa: Mostra coordenadas e pontos próximos
-			function onMapClick(e) {
-
-				//exibe coordenadas
-				/*popup
-					.setLatLng(e.latlng)
-					.setContent("Coordenadas: " + e.latlng.toString())
-					.openOn(mymap);*/
-
-				if (switchChegada==1 || (switchChegada==0 && switchPartida==0)){
-					centroPartida = e.latlng;
-					limpaRota();
-					limpaRotaOnClick();
-					linhasNaPartida = [];
-					linhasNaChegada = [];
-
-					//Cria circulo
-					circle = L.circle(e.latlng, {
-							color: 'red',
-							fillColor: '#f03',
-							fillOpacity: 0.5,
-							radius: radius
-					}).addTo(mymap);
-
-					//Exibe pontos dentro do raio do ponto clicado
-					geoJPromise.then(function(response){
-						var todosPontos = response.listaDePontos;
-						var center = e.latlng;
-						pontosOnRadius = [];
-
-						for (var i = 0; i < todosPontos.features.length; i++){
-							var point = coordsToLatLng(todosPontos.features[i].geometry.coordinates);
-							var distance = center.distanceTo(point);
-							if(distance <= radius){
-								todosPontos.features[i].properties.distance = distance;
-								todosPontos.features[i].properties.index = i;
-								pontosOnRadius.push(todosPontos.features[i]);
-							}
-						}
-
-						pontosOnRadius.sort(function(p1, p2){return p1.properties.distance - p2.properties.distance}); //ordena pontosde acordo com a distancia (ascendente)
-
-						//Limpa listas
-						var select = document.getElementById('selectPontoProximo');
-						while (select.options.length > 0) {
-							select.remove(0);
-						}
-						var select2 = document.getElementById('selectLinhaProximo');
-						while (select2.options.length > 0) {
-						select2.remove(0);
-						}
-
-						//console.log(pontosOnRadius);
-
-						//Define o Icone
-						var busIcon = L.icon({
-							iconUrl: 'img/bus.png',
-
-							iconSize:     [30, 45], // size of the icon
-							iconAnchor:   [15, 43], // point of the icon which will correspond to marker's location
-							//popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
-						});
-
-						//Preenche lista de pontos e adiciona ao mapa
-						for (var i = 0; i < pontosOnRadius.length; i++){
-
-							if(circle2){
-								mymap.removeLayer(circle2);}
-
-							var layer = L.geoJSON(pontosOnRadius[i], {
-								pointToLayer: function (feature, latlng) {
-									return L.marker(latlng, {icon: busIcon});
-																					}
-							}).addTo(mymap);
-							markers.push(layer);
-							var opt = document.createElement('option');
-							opt.value = pontosOnRadius[i].properties.linhas;
-							//console.log(opt.value);
-							opt.innerHTML = pontosOnRadius[i].properties.numeroDoPonto + ' - ' + pontosOnRadius[i].properties.rua + ', ' + pontosOnRadius[i].properties.referencia;
-							select.appendChild(opt);
-					}
-					})
-
-					limite[0] = e.latlng;
-			}
-
-			else {
-				if (circle2) {
-						mymap.removeLayer(circle2);}
-					for (var i = 0; i < markers2.length; i++){
-						mymap.removeLayer(markers2[i]);
-				}
-
-				linhasNaChegada = [];
-					
-				//Cria circulo
-				circle2 = L.circle(e.latlng, {
-						color: 'blue',
-						fillColor: '#2E64FE5',
-						fillOpacity: 0.5,
-						radius: radius
-				}).addTo(mymap);
-
-				
-				//Exibe pontos dentro do raio do ponto clicado
-				geoJPromise.then(function(response){
-					var todosPontos = response.listaDePontos;
-					var center = e.latlng; 
-					var todasLinhas = response.linhasDeOnibus;
-					pontosOnRadius = [];
-
-					for (var i = 0; i < todosPontos.features.length; i++){
-						var point = coordsToLatLng(todosPontos.features[i].geometry.coordinates);
-						var distance = center.distanceTo(point);
-						if(distance <= radius){
-							todosPontos.features[i].properties.distance = distance;
-							todosPontos.features[i].properties.index = i;
-							pontosOnRadius.push(todosPontos.features[i]);
-						}
-					}
-					
-					pontosOnRadius.sort(function(p1, p2){return p1.properties.distance - p2.properties.distance}); //ordena pontosde acordo com a distancia (ascendente)
-					console.log(pontosOnRadius); //----------------------------------------------
-                    //Limpa listas
-					var select = document.getElementById('selectPontoProximo');
-					while (select.options.length > 0) {                
-						select.remove(0);
-					}
-					var select2 = document.getElementById('selectLinhaProximo');		
-					while (select2.options.length > 0) {            
-					select2.remove(0);
-					}
-
-                    //console.log(pontosOnRadius);
-					
-					//Define o Icone
-					var busIcon = L.icon({
-						iconUrl: 'img/bus.png',
-
-						iconSize:     [30, 45], // size of the icon
-						iconAnchor:   [15, 43], // point of the icon which will correspond to marker's location
-						//popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
-					});
-                    //Preenche lista de pontos e adiciona ao mapa
-					for (var i = 0; i < pontosOnRadius.length; i++){
-	
-                        var layer = L.geoJSON(pontosOnRadius[i], {
-																			pointToLayer: function (feature, latlng) {
-																				return L.marker(latlng, {icon: busIcon});
-																				}
-																		}).addTo(mymap);
-						markers2.push(layer);
-						var opt = document.createElement('option');
-						opt.value = pontosOnRadius[i].properties.linhas;
-						//console.log(opt.value);
-						opt.innerHTML = pontosOnRadius[i].properties.numeroDoPonto + ' - ' + pontosOnRadius[i].properties.rua + ', ' + pontosOnRadius[i].properties.referencia;
-						select.appendChild(opt);
-				}
-				
-				//Armazena linhas no circulo no vetor
-				linhasRota = [];
-				for (var key in todasLinhas){
-					for (var j=0; j<todasLinhas[key].features.length; j++){
-						var point = coordsToLatLng(todasLinhas[key].features[j].geometry.coordinates);
-						var distancePartida = centroPartida.distanceTo(point);
-						if (distancePartida <= radius){
-							console.log(key);
-							for (var k=j+1; k<todasLinhas[key].features.length; k++){
-								point = coordsToLatLng(todasLinhas[key].features[k].geometry.coordinates)
-								var distanceChegada = center.distanceTo(point);
-								if (distanceChegada <= radius){
-									var jaContem = 0;
-									for (var n=0; n<linhasRota.length; n++){
-										if (linhasRota[n] == key){
-											jaContem = 1;
-										}
-									}
-										if (jaContem == 0){
-										linhasRota.push(key);}
-								}
-							}
-
-						}
-					}
-				}//---------------------------------------------------------------------------------------
-
-				})
-
-				limite[1] = e.latlng;
-
-				}
+			
+			function selecDestino(){
+				estado = 4;
 			}
 			
-			//MOSTRA LINHAS ENTRE PARTIDA E CHEGADA
-			var switchPartida = 0;
-			var switchChegada = 0;
-			//var e = document.getElementById("ddlViewBy");	
-			//console.log(pontosOnRadius);
-			function selecPartida(){
-
-				switchPartida = 1;
-				switchChegada = 0;
-
-				pontosDePartida = [];
-				console.log(pontosOnRadius);
-
-				var select = document.getElementById('linhasCorretas'); 
-				while (select.options.length > 0) {                
-					select.remove(0);
-				}  
-
-				pontosDePartida = [];
-				for (i=0; i<pontosOnRadius.length; i++){
-					pontosDePartida[i]=pontosOnRadius[i];
-				}
+			function voltaEstado3(){
+				estado = 3;
+				removeRota();
+				if(layerTodosPontos){mymap.removeLayer(layerTodosPontos);}
+				if(circuloPartida){mymap.removeLayer(circuloPartida);}
+				if(circuloDestino){mymap.removeLayer(circuloDestino);}
 			}
-
-			function selecDestino(){
-
-				switchChegada = 1;
-
-				var select = document.getElementById('linhasCorretas');
-				console.log(linhasRota);
-				for (var i = 0; i < linhasRota.length; i++){
-					var opt = document.createElement('option');
-					opt.value = linhasRota[i];
-					opt.innerHTML = linhasRota[i];
-					select.appendChild(opt);}
-
-				mymap.flyToBounds(limite);
-			}
-
-
-			//Chamada da funçao onMapClick
-			mymap.on('click', onMapClick);
-
-			//transforma coordenadas do ponto do banco de dados em um vetor
+			
 			function coordsToLatLng(c){
 				return [c[1], c[0]];
 			}
-
-			//Mostra linhas na lista do ponto escolhido
-			function selecionaPontoProximo(){
-
-				limpaRotaLite();//remove pontos do mapa
-
-				var pontoEscolhido = (document.getElementById('selectPontoProximo').value).split(','); //linhas do ponto escolhido
-				var posPontoEscolhido = document.getElementById('selectPontoProximo').selectedIndex; //posição na lista do ponto escolhido
-
-				var select = document.getElementById('selectLinhaProximo');
-
-                //Limpa lista
-				while (select.options.length > 0) {
-					select.remove(0);
+			
+			function montaLista(elemento, vetor){
+				while (elemento.options.length > 0) {
+					elemento.remove(0);
 				}
-
-                //Preenche lista e adiciona ponto escolhido no mapa
-				for (var i = 0; i < pontoEscolhido.length; i++){
+				console.log(vetor);
+				
+				for (var i = 0; i < vetor.length; i++){
 					var opt = document.createElement('option');
-					opt.value = pontoEscolhido[i];
-					opt.innerHTML = pontoEscolhido[i];
-					select.appendChild(opt);
+					opt.value = vetor[i];
+					opt.innerHTML = vetor[i];
+					elemento.appendChild(opt);
 				}
-				markers[posPontoEscolhido].addTo(mymap);
 			}
 
-			var pointMarkerOptions = {
-				radius: 6,
-				fillColor: "#ff7800",
-				color: "#000",
-				weight: 1,
-				opacity: 1,
-				fillOpacity: 0.8
-			};
-
-
-
-			//Mostra pontos da linha escolhida
-			function mostraLinhaProximo(){
-
-				var rotaLinha = [];
-				limpaRotaLite();
-                mymap.removeLayer(circle);
-
-				var linhaEscolhida = (document.getElementById('selectLinhaProximo').value).toString();
-				//console.log(linhaEscolhida);
-
-				geoJPromise.then(function(response){
-					var todasLinhas = response.linhasDeOnibus;
-					var layer = L.geoJSON(todasLinhas[linhaEscolhida], {
-									pointToLayer: function (feature, latlng) {
-										return L.circleMarker(latlng, pointMarkerOptions);
-									}
-								}).addTo(mymap);
-
-					markers.push(layer);
-
-
-					for(var i = 0; i < todasLinhas[linhaEscolhida].features.length; i++){
-						var tempLatLong = coordsToLatLng(todasLinhas[linhaEscolhida].features[i].geometry.coordinates);
-						rotaLinha.push(tempLatLong);
-					}
-
-					polyline = L.polyline(rotaLinha, {color: 'red', weight: 2.5, dashArray: [3, 5]}).addTo(mymap);
-
-                    //Adiciona setas de sentido à rota
-                    arrows = L.polylineDecorator(polyline, {patterns: [
-            			{offset: 25, repeat: 70, symbol: L.Symbol.arrowHead({pixelSize: 10, pathOptions: {fillOpacity: 1, weight: 0, color:"blue"}})}]
-    					}).addTo(mymap);
-
-
-				})
-
-			}
-
-			//Mostra pontos da linha escolhida
-			function mostraRota(){
+			function montaRota(objLinha){
+				var pontoCirculos = L.geoJSON(objLinha, {pointToLayer: function (feature, latlng) {return L.circleMarker(latlng, pointMarkerOptions);}});
 				
-				var rotaLinha = [];
-				if (polyline){
-                    mymap.removeLayer(polyline);
-                }
-				if(arrows){
-					mymap.removeLayer(arrows);
-				}
-				for (var i = 0; i < markersRota.length; i++){
-					mymap.removeLayer(markersRota[i]);
+				var coordenadasLatLng = [];
+				for (var i = 0; i < objLinha.features.length; i++){
+					coordenadasLatLng.push(coordsToLatLng(objLinha.features[i].geometry.coordinates));
 				}
 				
-
-				var linhaEscolhida = (document.getElementById('linhasCorretas').value).toString();
-
-				geoJPromise.then(function(response){
-					var todasLinhas = response.linhasDeOnibus;
-					var layer = L.geoJSON(todasLinhas[linhaEscolhida], {
-									pointToLayer: function (feature, latlng) {
-										return L.circleMarker(latlng, pointMarkerOptions);
-									}
-								}).addTo(mymap);
-					
-					markersRota.push(layer);
-
-					
-					for(var i = 0; i < todasLinhas[linhaEscolhida].features.length; i++){
-						var tempLatLong = coordsToLatLng(todasLinhas[linhaEscolhida].features[i].geometry.coordinates);
-						rotaLinha.push(tempLatLong);
-					}
-					
-					polyline = L.polyline(rotaLinha, {color: 'red', weight: 2.5, dashArray: [3, 5]}).addTo(mymap);
+				var polyline = L.polyline(coordenadasLatLng, {color: 'red', weight: 2.5, dashArray: [3, 5]});
                     
-                    //Adiciona setas de sentido à rota;
-                    arrows = L.polylineDecorator(polyline, {patterns: [
-            			{offset: 25, repeat: 70, symbol: L.Symbol.arrowHead({pixelSize: 10, pathOptions: {fillOpacity: 1, weight: 0, color:"blue"}})}]
-    					}).addTo(mymap);
+				//Adiciona setas de sentido à rota;
+				var arrows = L.polylineDecorator(polyline, {patterns: [{offset: 25, repeat: 70, symbol: L.Symbol.arrowHead({pixelSize: 10, pathOptions: {fillOpacity: 1, weight: 0, color:"blue"}})}]
+														});
+														
+				layerGroup = L.layerGroup([pontoCirculos, polyline, arrows]).addTo(mymap);
+			}
+			
+			function removeRota(){
+				if(layerGroup){mymap.removeLayer(layerGroup);}			
+			}
+			
+		//----------------------------------------------------------------------------------------------------------------------------
+					
+			function escolha(b){
+				switch (b.value){
+					case "1":
+						document.getElementById("menu").style.display = "none";
+						document.getElementById("mostraTodosPontos").style.display = "block";
+						estado = parseFloat(b.value);
+						primeiraOpcao();
+						break;
+					
+					case "2":
+						document.getElementById("menu").style.display = "none";
+						document.getElementById("pontosProximos").style.display = "block";
+						estado = parseFloat(b.value);
+						break;
+						
+					case "3":
+						document.getElementById("menu").style.display = "none";
+						document.getElementById("rotaLocalidades").style.display = "block";
+						estado = parseFloat(b.value);
+						break;
+				}
+			}
+			
+			function voltaMenu(){
+				removeRota();
+				
+				if(layerTodosPontos){mymap.removeLayer(layerTodosPontos);}
+				if(circuloPartida){mymap.removeLayer(circuloPartida);}
+				if(circuloDestino){mymap.removeLayer(circuloDestino);}
+				
+				document.getElementById("mostraTodosPontos").style.display = "none";
+				document.getElementById("pontosProximos").style.display = "none";
+				document.getElementById("rotaLocalidades").style.display = "none";
+				document.getElementById("menu").style.display = "block";
+				estado = 0;
+			}
+
+		//----------------------------------------------------------------------------------------------------------------------------	
+		
+			function primeiraOpcao(){
+				geoJPromise.then(function(response){
+					var todosPontos = response.listaDePontos;
+					layerTodosPontos = L.geoJSON(todosPontos, {pointToLayer: function (feature, latlng) {return L.marker(latlng, {icon: busIcon});},
+																	onEachFeature: function(feature, layer){layer.bindPopup(feature.properties.numeroDoPonto + " - " + feature.properties.rua + ", " + feature.properties.referencia);
+																											layer.on('click', onLayerClick);}
+																	}).addTo(mymap);
+				})
+			}
+			
+			function onLayerClick(e){				
+				//document.getElementById('dadosPonto').innerHTML = e.target.feature.properties.numeroDoPonto + " - " + e.target.feature.properties.rua + ", " + e.target.feature.properties.referencia;
+				var linhasNoPonto = e.target.feature.properties.linhas;
+				var select = document.getElementById('selectLinha');
+				montaLista(select, linhasNoPonto);
+			}
+			
+			function mostraLinha(){
+				removeRota();
+			
+				var linhaEscolhida = (document.getElementById('selectLinha').value).toString();
+				geoJPromise.then(function(response){
+					montaRota(response.linhasDeOnibus[linhaEscolhida]);					
+				})
+			}			
+			
+			//---------------------------------------------------------------------------------------------------------------------
+			
+			
+			function clickMapa(e){				
+				
+				if(estado == 2){
+					
+					centroPartida = e.latlng;
+					
+					//Remove layers
+					removeRota();
+					if(layerTodosPontos){mymap.removeLayer(layerTodosPontos);}
+					if(circuloPartida){mymap.removeLayer(circuloPartida);}
+					
+					//Cria circulo					
+					circuloPartida = L.circle(centroPartida, {color: 'red', fillColor: '#f03', fillOpacity: 0.5,	radius: raioCirculo}).addTo(mymap);
+					
+					geoJPromise.then(function(response){
+						var todosPontos = response.listaDePontos;
+						tempGeoJSON = {type: "FeatureCollection", features: []};
+						for (var i = 0; i < todosPontos.features.length; i++){
+							var pontoLatLng = coordsToLatLng(todosPontos.features[i].geometry.coordinates);
+							if(centroPartida.distanceTo(pontoLatLng) <= raioCirculo){
+								tempGeoJSON.features.push(todosPontos.features[i]);
+							}
+						}
+						
+						layerTodosPontos = L.geoJSON(tempGeoJSON, {pointToLayer: function (feature, latlng) {return L.marker(latlng, {icon: busIcon});},
+																		onEachFeature: function(feature, layer){layer.bindPopup(feature.properties.numeroDoPonto + " - " + feature.properties.rua + ", " + feature.properties.referencia);
+																												layer.on('click', onLayerClick2);}
+																		}).addTo(mymap);
+					})
+				}
+				
+				if(estado == 3){
+				
+					if(circuloPartida){mymap.removeLayer(circuloPartida);}
+					
+					centroPartida = e.latlng;
+					
+					circuloPartida = L.circle(centroPartida, {color: 'red', fillColor: '#f03', fillOpacity: 0.5,	radius: raioCirculo}).addTo(mymap);
+					
+					
+					
+				}	
+					
+				if(estado == 4){
+				
+					if(circuloDestino){mymap.removeLayer(circuloDestino);}
+					if(layerTodosPontos){mymap.removeLayer(layerTodosPontos);}
+					
+					centroDestino = e.latlng;
+															
+					circuloDestino = L.circle(centroDestino, {color: 'blue', fillColor: '#2E64FE5', fillOpacity: 0.5,	radius: raioCirculo}).addTo(mymap);
+					
+					//Encontra as linhas que passam no circulo de partida
+									
+					
+					geoJPromise.then(function(response){
+						tempGeoJSON = {type: "FeatureCollection", features: []};
+						var linhasNaPartida = [];	
+						
+						var todosPontos = response.listaDePontos;						
+						for(var i = 0; i < todosPontos.features.length; i++){
+							var pontoLatLng = coordsToLatLng(todosPontos.features[i].geometry.coordinates);
+							if(centroPartida.distanceTo(pontoLatLng) <= raioCirculo){
+								tempGeoJSON.features.push(todosPontos.features[i]);
+								for(var j = 0; j < todosPontos.features[i].properties.linhas.length; j++){
+									if(linhasNaPartida.indexOf(todosPontos.features[i].properties.linhas[j]) == -1)	
+										linhasNaPartida.push(todosPontos.features[i].properties.linhas[j]);
+								}
+							}
+						}
 						
 					
-				})		
+						//Encontra as linhas comuns aos circulos de partida e destino					
+						var linhasIguais = [];
+						
+							var todosPontos = response.listaDePontos;						
+							for(var i = 0; i < todosPontos.features.length; i++){
+								var pontoLatLng = coordsToLatLng(todosPontos.features[i].geometry.coordinates);
+								if(centroDestino.distanceTo(pontoLatLng) <= raioCirculo){
+									for(var j = 0; j < todosPontos.features[i].properties.linhas.length; j++){
+										if(linhasNaPartida.indexOf(todosPontos.features[i].properties.linhas[j]) != -1 && linhasIguais.indexOf(todosPontos.features[i].properties.linhas[j]) == -1){	
+											linhasIguais.push(todosPontos.features[i].properties.linhas[j]);
+										}
+									}
+								}
+							}
+						
+						
+							//Remove as linhas que passam primeiro no circulo de destino
+							var todasLinhas = response.linhasDeOnibus;
+							for(var i = 0; i < linhasIguais.length; i++){
+								var passaPartida = 0;
+								var passaDestino = 0;
+								
+								for(var j = 0; j < todasLinhas[linhasIguais[i]].features.length; j++){
+									if(centroDestino.distanceTo(coordsToLatLng(todasLinhas[linhasIguais[i]].features[j].geometry.coordinates)) <= raioCirculo){
+										passaDestino = j;
+										//break;
+									}
+									if(centroPartida.distanceTo(coordsToLatLng(todasLinhas[linhasIguais[i]].features[j].geometry.coordinates)) <= raioCirculo){
+										passaPartida = j;
+										//break;
+										
+									}
+								}
+								if(passaDestino < passaPartida) {
+									linhasIguais.splice(i, 1);
+									i--;
+								}
+							}
+							
+							var selectLinhasCorretas = document.getElementById('linhasCorretas')
+							while(selectLinhasCorretas.options.length > 0){
+								selectLinhasCorretas.remove(0);
+							}
+							
+							for (var i = 0; i < linhasIguais.length; i++){
+								var opt = document.createElement('option');
+								opt.value = linhasIguais[i];
+								opt.innerHTML = linhasIguais[i];
+								selectLinhasCorretas.appendChild(opt);
+							}
+							
+							//Enfim remove do objeto as linhas que não então presentes em linhasIguais
+							/*for(var i = 0; i < tempGeoJSON.features.length; i++){
+								for(var j = 0; j < tempGeoJSON.features[i].properties.linhas.length; j++){							
+									if(linhasIguais.indexOf(tempGeoJSON.features[i].properties.linhas[j]) == -1){
+										tempGeoJSON.features[i].properties.linhas.splice(j, 1);	
+										j--;
+									}								
+								}
+							}
+							
+							
+							novoTempGeoJSON = {type: "FeatureCollection", features: []};
+							for(var i = 0; i < tempGeoJSON.features.length; i++){						
+								if(tempGeoJSON.features[i].properties.linhas.length){
+									novoTempGeoJSON.features.push(tempGeoJSON.features[i]);
+								}
+							}
+							
+							layerTodosPontos = L.geoJSON(novoTempGeoJSON,{pointToLayer: function (feature, latlng) {return L.marker(latlng, {icon: busIcon});},
+																			onEachFeature: function(feature, layer){layer.bindPopup(feature.properties.numeroDoPonto + " - " + feature.properties.rua + ", " + feature.properties.referencia);
+																											layer.on('click', onLayerClick3);}
+																			}).addTo(mymap);*/
+					})					
+					
+				}
+			
 			}
+			mymap.on('click', clickMapa);
+			
+			function onLayerClick2(e){				
+				//document.getElementById('dadosPonto2').innerHTML = e.target.feature.properties.numeroDoPonto + " - " + e.target.feature.properties.rua + ", " + e.target.feature.properties.referencia;
+				var linhasNoPonto = e.target.feature.properties.linhas;
+				var select = document.getElementById('selectLinhaProximo');
+				montaLista(select, linhasNoPonto);
+			}
+			
+			function mostraLinha2(){
+				removeRota();
+			
+				var linhaEscolhida = (document.getElementById('selectLinhaProximo').value).toString();
+				geoJPromise.then(function(response){
+					montaRota(response.linhasDeOnibus[linhaEscolhida]);					
+				})
+			}
+			
+			//---------------------------------------------------------------------------------------------------------------------
+			
+			function onLayerClick3(e){				
+				//document.getElementById('dadosPonto3').innerHTML = e.target.feature.properties.numeroDoPonto + " - " + e.target.feature.properties.rua + ", " + e.target.feature.properties.referencia;
+				var linhasNoPonto = e.target.feature.properties.linhas;
+				var select = document.getElementById('linhasCorretas');
+				montaLista(select, linhasNoPonto);
+			}
+			
+			function mostraLinha3(){
+				removeRota();
+			
+				var linhaEscolhida = (document.getElementById('linhasCorretas').value).toString();
+				geoJPromise.then(function(response){
+					montaRota(response.linhasDeOnibus[linhaEscolhida]);					
+				})
+			}
+			
+			//---------------------------------------------------------------------------------------------------------------------
+		
+
+
 
 		</script>
 
