@@ -5,7 +5,8 @@
 		<!-- Leaflet links -->
 		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" />
 		<script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"></script>
-		<script src="js/leaflet.polylineDecorator.js"></script> <!--Adiciona sentido à rota-->
+		<script src="js/Leaflet.PolylineDecorator/leaflet.polylineDecorator.js"></script> <!--Adiciona sentido à rota-->
+
 
 		<!-- Bootstrap links -->
 		<meta charset="utf-8">
@@ -63,7 +64,7 @@
 					<p>Mostrar rotas entre duas localidades:</p>
 					<p>Selecione o local de partida e de clique no botão para escolher o local de destino.</p>
 					<p id="dadosPonto3"></p>
-					<button onClick='selecDestino()' class="btn btn-secondary">Selec. Loc. Destino</button>
+					<button onClick='selecDestino()' class="btn btn-primary">Escolher Destino</button>
 					<select id='linhasCorretas' class="form-control formcontrol-lg"></select> </p>
 					<button onClick='mostraLinha3()' class="btn btn-secondary">Mostrar Rota</button> </p>
 					<button onClick='voltaEstado3()' class="btn btn-secondary">Nova Busca</button> </p>
@@ -85,6 +86,8 @@
 			var URL = 'https://dl.dropboxusercontent.com/s/w4nstbivtiax0gm/DadosTeste.json?dl=0'; //dados geoJSON
 
 			var fetched = false;
+			
+			
 
 			//FETCH
 			async function fetchData(){
@@ -95,7 +98,7 @@
 			}
 
 			var geoJPromise = fetchData();
-		
+			
 		//VARIÁVEIS-------------------------------------------------------------------------------------------------------------------
 			//Define o Icone
 			var busIcon = L.icon({
@@ -202,20 +205,20 @@
 					case "1":
 						document.getElementById("menu").style.display = "none";
 						document.getElementById("mostraTodosPontos").style.display = "block";
-						estado = parseFloat(b.value);
+						estado = parseInt(b.value);
 						primeiraOpcao();
 						break;
 					
 					case "2":
 						document.getElementById("menu").style.display = "none";
 						document.getElementById("pontosProximos").style.display = "block";
-						estado = parseFloat(b.value);
+						estado = parseInt(b.value);
 						break;
 						
 					case "3":
 						document.getElementById("menu").style.display = "none";
 						document.getElementById("rotaLocalidades").style.display = "block";
-						estado = parseFloat(b.value);
+						estado = parseInt(b.value);
 						break;
 				}
 			}
@@ -243,7 +246,7 @@
 																	onEachFeature: function(feature, layer){layer.bindPopup(feature.properties.numeroDoPonto + " - " + feature.properties.rua + ", " + feature.properties.referencia);
 																											layer.on('click', onLayerClick);}
 																	}).addTo(mymap);
-				})
+				});
 			}
 			
 			function onLayerClick(e){				
@@ -259,7 +262,7 @@
 				var linhaEscolhida = (document.getElementById('selectLinha').value).toString();
 				geoJPromise.then(function(response){
 					montaRota(response.linhasDeOnibus[linhaEscolhida]);					
-				})
+				});
 			}			
 			
 			//---------------------------------------------------------------------------------------------------------------------
@@ -293,7 +296,7 @@
 																		onEachFeature: function(feature, layer){layer.bindPopup(feature.properties.numeroDoPonto + " - " + feature.properties.rua + ", " + feature.properties.referencia);
 																												layer.on('click', onLayerClick2);}
 																		}).addTo(mymap);
-					})
+					});
 				}
 				
 				if(estado == 3){
@@ -319,8 +322,8 @@
 					
 					//Encontra as linhas que passam no circulo de partida
 									
-					
-					geoJPromise.then(function(response){
+					var geoJPromise2 = fetchData();
+					geoJPromise2.then(function(response){
 						tempGeoJSON = {type: "FeatureCollection", features: []};
 						var linhasNaPartida = [];	
 						
@@ -376,7 +379,7 @@
 								}
 							}
 							
-							var selectLinhasCorretas = document.getElementById('linhasCorretas')
+							/*var selectLinhasCorretas = document.getElementById('linhasCorretas')
 							while(selectLinhasCorretas.options.length > 0){
 								selectLinhasCorretas.remove(0);
 							}
@@ -386,10 +389,10 @@
 								opt.value = linhasIguais[i];
 								opt.innerHTML = linhasIguais[i];
 								selectLinhasCorretas.appendChild(opt);
-							}
+							}*/
 							
 							//Enfim remove do objeto as linhas que não então presentes em linhasIguais
-							/*for(var i = 0; i < tempGeoJSON.features.length; i++){
+							for(var i = 0; i < tempGeoJSON.features.length; i++){
 								for(var j = 0; j < tempGeoJSON.features[i].properties.linhas.length; j++){							
 									if(linhasIguais.indexOf(tempGeoJSON.features[i].properties.linhas[j]) == -1){
 										tempGeoJSON.features[i].properties.linhas.splice(j, 1);	
@@ -399,18 +402,11 @@
 							}
 							
 							
-							novoTempGeoJSON = {type: "FeatureCollection", features: []};
-							for(var i = 0; i < tempGeoJSON.features.length; i++){						
-								if(tempGeoJSON.features[i].properties.linhas.length){
-									novoTempGeoJSON.features.push(tempGeoJSON.features[i]);
-								}
-							}
-							
-							layerTodosPontos = L.geoJSON(novoTempGeoJSON,{pointToLayer: function (feature, latlng) {return L.marker(latlng, {icon: busIcon});},
+							layerTodosPontos = L.geoJSON(tempGeoJSON,{pointToLayer: function (feature, latlng) {if(feature.properties.linhas.length)return L.marker(latlng, {icon: busIcon});},
 																			onEachFeature: function(feature, layer){layer.bindPopup(feature.properties.numeroDoPonto + " - " + feature.properties.rua + ", " + feature.properties.referencia);
 																											layer.on('click', onLayerClick3);}
-																			}).addTo(mymap);*/
-					})					
+																			}).addTo(mymap);
+					});					
 					
 				}
 			
