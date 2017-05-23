@@ -6,6 +6,8 @@
 		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" />
 		<script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"></script>
 		<script src="js/Leaflet.PolylineDecorator/leaflet.polylineDecorator.js"></script> <!--Adiciona sentido à rota-->
+		<link rel="stylesheet" href="js/leaflet-control-geocoder/Control.Geocoder.css" />	<!--Adiciona Geocoding-->
+		<script src="js/leaflet-control-geocoder/Control.Geocoder.js"></script>
 
 
 		<!-- Bootstrap links -->
@@ -15,6 +17,8 @@
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
 		<link rel="stylesheet" href="style/font-awesome/css/font-awesome.css">
 		<link rel="stylesheet" href="style/estilo.css">
+		
+		
 
 	</head>
 	<body>
@@ -85,11 +89,43 @@
 			
 			mymap.zoomControl.setPosition('topright');
 			
+			geocoder = L.Control.geocoder({
+											defaultMarkGeocode: false,
+										    geocoder: L.Control.Geocoder.nominatim({
+										        geocodingQueryParams: {bounded: 1, viewbox: [-20.3301478, -20.2443003, -40.3623321, -40.2732591]}
+											})
+									});
+										
+						geocoder.on('markgeocode', function(e) {
+					        var geocCoord = e.geocode.center;
+					        console.log(geocCoord);
+					        //L.marker(geocCoord).addTo(mymap);
+					        mymap.flyTo(geocCoord, 15);
+					        if(estado == 0 || estado == 1){
+					        	if(geocodMarker){mymap.removeLayer(geocodMarker);}
+					        	geocodMarker = L.marker(geocCoord).addTo(mymap);
+					        }
+					        
+					        if(estado == 2){
+					        	if(geocodMarker){mymap.removeLayer(geocodMarker);}
+					        	onPontosProximos(geocCoord);
+					        }
+					        if(estado == 3){
+								if(geocodMarker){mymap.removeLayer(geocodMarker);}
+								onRotaEntreLocais1(geocCoord);
+							}	
+								
+							if(estado == 4){
+								if(geocodMarker){mymap.removeLayer(geocodMarker);}
+								onRotaEntreLocais2(geocCoord);
+							}
+					        
+						}).addTo(mymap);
+			
+			
 			var URL = 'https://dl.dropboxusercontent.com/s/w4nstbivtiax0gm/DadosTeste.json?dl=0'; //dados geoJSON
 
 			var fetched = false;
-			
-			
 
 			//FETCH
 			async function fetchData(){
@@ -121,6 +157,9 @@
 			};
 			
 			var estado = 0;
+			
+			var geocoder;
+			var geocodMarker;
 			
 			var layerTodosPontos;
 			var layerGroup;
@@ -224,102 +263,9 @@
 				}
 			}
 			
-		//----------------------------------------------------------------------------------------------------------------------------
-					
-			function escolha(b){
-				switch (b.value){
-					case "1":
-						document.getElementById("menu").style.display = "none";
-						document.getElementById("mostraTodosPontos").style.display = "block";
-						estado = parseInt(b.value);
-						primeiraOpcao();
-						break;
-					
-					case "2":
-						document.getElementById("menu").style.display = "none";
-						document.getElementById("pontosProximos").style.display = "block";
-						estado = parseInt(b.value);
-						break;
-						
-					case "3":
-						document.getElementById("menu").style.display = "none";
-						document.getElementById("rotaLocalidades").style.display = "block";
-						estado = parseInt(b.value);
-						msgRotaLocalidades(1);
-						break;
-				}
-			}
 			
-			function voltaMenu(b){
-				removeRota();
-				
-				if(layerTodosPontos){mymap.removeLayer(layerTodosPontos);}
-				if(circuloPartida){mymap.removeLayer(circuloPartida);}
-				if(circuloDestino){mymap.removeLayer(circuloDestino);}
-				
-				document.getElementById("mostraTodosPontos").style.display = "none";
-				document.getElementById("pontosProximos").style.display = "none";
-				document.getElementById("rotaLocalidades").style.display = "none";
-				document.getElementById("menu").style.display = "block";
-				estado = 0;
-				
-				var select;
-				switch (b.value){
-					case "1":
-						select = document.getElementById('selectLinha');
-						break;
-					
-					case "2":
-						select = document.getElementById('selectLinhaProximo');
-						break;
-						
-					case "3":
-						select = document.getElementById('linhasCorretas');
-						break;
-				}
-				
-				while(select.options.length > 0){
-					select.remove(0);
-				}
-				
-			}
-
-		//----------------------------------------------------------------------------------------------------------------------------	
-		
-			function primeiraOpcao(){
-				geoJPromise.then(function(response){
-					var todosPontos = response.listaDePontos;
-					layerTodosPontos = L.geoJSON(todosPontos, {pointToLayer: function (feature, latlng) {return L.marker(latlng, {icon: busIcon});},
-																	onEachFeature: function(feature, layer){layer.bindPopup(feature.properties.numeroDoPonto + " - " + feature.properties.rua + ", " + feature.properties.referencia);
-																											layer.on('click', onLayerClick);}
-																	}).addTo(mymap);
-				});
-			}
-			
-			function onLayerClick(e){				
-				//document.getElementById('dadosPonto').innerHTML = e.target.feature.properties.numeroDoPonto + " - " + e.target.feature.properties.rua + ", " + e.target.feature.properties.referencia;
-				var linhasNoPonto = e.target.feature.properties.linhas;
-				var select = document.getElementById('selectLinha');
-				montaLista(select, linhasNoPonto);
-			}
-			
-			function mostraLinha(){
-				removeRota();
-			
-				var linhaEscolhida = (document.getElementById('selectLinha').value).toString();
-				geoJPromise.then(function(response){
-					montaRota(response.linhasDeOnibus[linhaEscolhida]);					
-				});
-			}			
-			
-			//---------------------------------------------------------------------------------------------------------------------
-			
-			
-			function clickMapa(e){				
-				
-				if(estado == 2){
-					
-					centroPartida = e.latlng;
+			function onPontosProximos(coordenada){
+				centroPartida = coordenada;
 					
 					//Remove layers
 					removeRota();
@@ -344,33 +290,26 @@
 																												layer.on('click', onLayerClick2);}
 																		}).addTo(mymap);
 					});
-				}
-				
-				if(estado == 3){
-				
-					msgRotaLocalidades(2);
+			}
+			
+			function onRotaEntreLocais1(coordenada){
+				msgRotaLocalidades(2);
 				
 					if(circuloPartida){mymap.removeLayer(circuloPartida);}
 					
-					centroPartida = e.latlng;
+					centroPartida = coordenada;
 					
 					circuloPartida = L.circle(centroPartida, {color: 'red', fillColor: '#f03', fillOpacity: 0.5,	radius: raioCirculo}).addTo(mymap);
-					
-					
-					
-				}	
-					
-				if(estado == 4){
-				
-					if(circuloDestino){mymap.removeLayer(circuloDestino);}
+			}
+			
+			function onRotaEntreLocais2(coordenada){
+				if(circuloDestino){mymap.removeLayer(circuloDestino);}
 					if(layerTodosPontos){mymap.removeLayer(layerTodosPontos);}
 					
-					centroDestino = e.latlng;
-															
+					centroDestino = coordenada;															
 					circuloDestino = L.circle(centroDestino, {color: 'blue', fillColor: '#2E64FE5', fillOpacity: 0.5,	radius: raioCirculo}).addTo(mymap);
 					
 					//Encontra as linhas que passam no circulo de partida
-									
 					geoJPromise2 = fetchData();
 					geoJPromise2.then(function(response){
 						tempGeoJSON = {type: "FeatureCollection", features: []};
@@ -460,11 +399,120 @@
 																			onEachFeature: function(feature, layer){layer.bindPopup(feature.properties.numeroDoPonto + " - " + feature.properties.rua + ", " + feature.properties.referencia);
 																											layer.on('click', onLayerClick3);}
 																			}).addTo(mymap);
+								
 							}else{
 								alert("Não há linhas comuns a essas localidades, faça uma nova busca.");
 							}
-					});					
+					});
+			}
+			
+		//----------------------------------------------------------------------------------------------------------------------------
 					
+			function escolha(b){
+				switch (b.value){
+					case "1":
+						document.getElementById("menu").style.display = "none";
+						document.getElementById("mostraTodosPontos").style.display = "block";
+						estado = parseInt(b.value);
+						primeiraOpcao();
+						break;
+					
+					case "2":
+						document.getElementById("menu").style.display = "none";
+						document.getElementById("pontosProximos").style.display = "block";
+						estado = parseInt(b.value);
+						break;
+						
+					case "3":
+						document.getElementById("menu").style.display = "none";
+						document.getElementById("rotaLocalidades").style.display = "block";
+						estado = parseInt(b.value);
+						msgRotaLocalidades(1);
+						break;
+				}
+			}
+			
+			function voltaMenu(b){
+				removeRota();
+				
+				if(layerTodosPontos){mymap.removeLayer(layerTodosPontos);}
+				if(circuloPartida){mymap.removeLayer(circuloPartida);}
+				if(circuloDestino){mymap.removeLayer(circuloDestino);}
+				if(geocodMarker){mymap.removeLayer(geocodMarker);}
+				
+				document.getElementById("mostraTodosPontos").style.display = "none";
+				document.getElementById("pontosProximos").style.display = "none";
+				document.getElementById("rotaLocalidades").style.display = "none";
+				document.getElementById("menu").style.display = "block";
+				estado = 0;
+				
+				var select;
+				switch (b.value){
+					case "1":
+						select = document.getElementById('selectLinha');
+						break;
+					
+					case "2":
+						select = document.getElementById('selectLinhaProximo');
+						break;
+						
+					case "3":
+						select = document.getElementById('linhasCorretas');
+						break;
+				}
+				
+				while(select.options.length > 0){
+					select.remove(0);
+				}
+				
+			}
+
+		//----------------------------------------------------------------------------------------------------------------------------	
+		
+			function primeiraOpcao(){
+				geoJPromise.then(function(response){
+					var todosPontos = response.listaDePontos;
+					layerTodosPontos = L.geoJSON(todosPontos, {pointToLayer: function (feature, latlng) {return L.marker(latlng, {icon: busIcon});},
+																	onEachFeature: function(feature, layer){layer.bindPopup(feature.properties.numeroDoPonto + " - " + feature.properties.rua + ", " + feature.properties.referencia);
+																											layer.on('click', onLayerClick);}
+																	}).addTo(mymap);
+				});
+			}
+			
+			function onLayerClick(e){				
+				//document.getElementById('dadosPonto').innerHTML = e.target.feature.properties.numeroDoPonto + " - " + e.target.feature.properties.rua + ", " + e.target.feature.properties.referencia;
+				var linhasNoPonto = e.target.feature.properties.linhas;
+				var select = document.getElementById('selectLinha');
+				montaLista(select, linhasNoPonto);
+			}
+			
+			function mostraLinha(){
+				removeRota();
+			
+				var linhaEscolhida = (document.getElementById('selectLinha').value).toString();
+				geoJPromise.then(function(response){
+					montaRota(response.linhasDeOnibus[linhaEscolhida]);					
+				});
+			}			
+			
+			//---------------------------------------------------------------------------------------------------------------------
+			
+			
+			function clickMapa(e){				
+				
+				if(estado == 2){
+					
+					onPontosProximos(e.latlng);
+				}
+				
+				if(estado == 3){
+				
+					onRotaEntreLocais1(e.latlng);
+				}	
+					
+				if(estado == 4){
+				
+					onRotaEntreLocais2(e.latlng);
 				}
 			
 			}
@@ -505,9 +553,6 @@
 			}
 			
 			//---------------------------------------------------------------------------------------------------------------------
-		
-
-
 
 		</script>
 
